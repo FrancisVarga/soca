@@ -172,6 +172,12 @@ module Soca
       end
     end
 
+    desc 'purge [ENV]', "deletes the design document for the database at ENV"
+    def purge(env = 'default')
+      push = pusher(env)
+      push.purge!
+    end
+
     private
     def appname
       @appname = options[:name] || File.basename(appdir)
@@ -183,6 +189,9 @@ module Soca
 
     def pusher(env)
       Soca::Pusher.new(appdir, env, config_file)
+    rescue => e
+      say e.message, :red
+      exit
     end
 
   end

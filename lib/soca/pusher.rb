@@ -16,7 +16,11 @@ module Soca
     end
 
     def load_config
-      @config = JSON.parse(File.read(config_path))
+      if File.readable?(config_path)
+        @config = JSON.parse(File.read(config_path))
+      else
+        raise "Could not find config at '#{config_path}'. Run `soca init`"
+      end
     end
 
     def load_couchapprc
@@ -37,7 +41,7 @@ module Soca
     end
 
     def json
-      JSON.generate(build)
+      JSON.pretty_generate(build)
     end
 
     def db_url
@@ -84,6 +88,14 @@ module Soca
       logger.debug "pushing document to #{push_url}"
       put!(push_url, post_body)
       run_hook_file!(:after_push)
+    end
+
+    def purge!
+      get_current_revision
+      url = push_url
+      url += "?rev=#{revision}" if revision && revision.length > 0
+      logger.debug "deleting document at #{url}"
+      delete!(url)
     end
 
     def compact!
@@ -180,6 +192,13 @@ module Soca
       response = Typhoeus::Request.post(url, :body => body, :headers => {'Content-type' => 'application/json'})
       logger.debug "Response: #{response.code} #{response.body[0..200]}"
       response
+    end
+
+    def delete!(url)
+      logger.debug "DELETE #{url}"
+      response = Typhoeus::Request.delete(url)
+      logger.debug "Response: #{response.code} #{response.body[0..200]}"
+      response.code == 200 ? response.body : nil
     end
 
   end
